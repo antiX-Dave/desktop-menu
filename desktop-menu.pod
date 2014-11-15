@@ -1,0 +1,12 @@
+=encoding utf8
+
+=head1 NAME
+
+desktop-menu - Utility to build window manager menus
+
+=head1 SYNOPSIS
+
+This program is a utility to automatically build menus for various window 
+managers. blahblah not finished
+
+
