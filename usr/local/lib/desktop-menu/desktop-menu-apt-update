@@ -12,14 +12,12 @@ check)
     past_date=$(cat $tmp_compare)
     if [ "$current_date" != "$past_date" ]; then
         desktop-menu --write-out-global;
-        jwm -restart;
     else 
         exit 0
     fi
 ;;
 force)
     desktop-menu --write-out-global;
-    jwm -restart;
 ;;
 *)
     echo "Not an option";
