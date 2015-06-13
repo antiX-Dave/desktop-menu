@@ -207,7 +207,7 @@ class SUB_ORDER:
       elif re.search(r'name', value):
         setattr(var, var.VARIABLE, NAME)
       count=count+1
-          
+      
 root_folder = ""
 menu_file = ""
 terminal = "desktop-defaults-run -t %s"
@@ -259,45 +259,52 @@ for o, v in opts:
   elif o in ("-h", "-?", "--help"): print_usage(0)
   elif o in ("-v", "--version"): print_version()
 
+def build_menu():
+    Var().read()
+    if write_out_file:
+        Var.App_File = write_out_file
+  
+    open((USER_HOME+"/"+Var.Conf_Dir+"/"+Var.App_File), 'w').close()  
 
+    menu = xdg.Menu.parse(menu_file)
+    if root_folder: menu = menu.getMenu(root_folder)
+  
+    if write_out:
+      write_to_file(Var.File_Start)
+  
+    process_menu(menu)
+  
+    if write_out:
+      write_to_file(Var.File_End)
+  
+    if not (os.path.getsize((USER_HOME+"/"+Var.Conf_Dir+"/"+Var.App_File)) > 50):
+      SUB_ORDER('prog',"Retry",'',"desktop-menu --write-out")
+      write_to_file((Var.Program % (SUB_ORDER.sub0, SUB_ORDER.sub1, SUB_ORDER.sub2)).encode(encoding))
+
+encoding = locale.getlocale()[1] or 'UTF-8'
 if write_out_global:
     USER_HOME="/usr/share/desktop-menu/"
+    for i in os.listdir('/usr/share/desktop-menu/templates'):
+      if i.endswith(".template"):
+        i = re.sub(r'\..*', '', i)
+        print 'Writing Menu: %s' % i
+        DESKTOP = i
+        build_menu()
 else:
     USER_HOME = os.environ['HOME']
-
-if 'DISPLAY' in os.environ:
-    DISPLAY = os.environ['DISPLAY']
-    DISPLAY = re.sub(r':', '', DISPLAY)
-    DISPLAY_SPLIT = DISPLAY.split('.')
-    DISPLAY = DISPLAY_SPLIT[0]
-    if not DESKTOP_CODE:
-        with open(USER_HOME+"/.desktop-session/desktop-code."+DISPLAY, "r") as f:
-            DESKTOP_CODE = f.readline()
-            DESKTOP_CODE = re.sub(r'\n', '', DESKTOP_CODE)
+    if 'DISPLAY' in os.environ and not write_out_global:
+        DISPLAY = os.environ['DISPLAY']
+        DISPLAY = re.sub(r':', '', DISPLAY)
+        DISPLAY_SPLIT = DISPLAY.split('.')
+        DISPLAY = DISPLAY_SPLIT[0]
+        if not DESKTOP_CODE:
+            with open(USER_HOME+"/.desktop-session/desktop-code."+DISPLAY, "r") as f:
+                DESKTOP_CODE = f.readline()
+                DESKTOP_CODE = re.sub(r'\n', '', DESKTOP_CODE)
             
-if not DESKTOP_CODE and not DISPLAY:
-  print 'No Desktop Code and no DISPLAY. Please specify a desktop code with --desktop-code';
-  exit
-else:  
-  DESKTOP = re.sub(r'.*-', '', DESKTOP_CODE)
-  Var().read()
-  if write_out_file:
-      Var.App_File = write_out_file
-      
-  open((USER_HOME+"/"+Var.Conf_Dir+"/"+Var.App_File), 'w').close()  
-
-  encoding = locale.getlocale()[1] or 'UTF-8'
-  menu = xdg.Menu.parse(menu_file)
-  if root_folder: menu = menu.getMenu(root_folder)
-  
-  if write_out:
-    write_to_file(Var.File_Start)
-  
-  process_menu(menu)
-  
-  if write_out:
-    write_to_file(Var.File_End)
-  
-  if not (os.path.getsize((USER_HOME+"/"+Var.Conf_Dir+"/"+Var.App_File)) > 50):
-    SUB_ORDER('prog',"Retry",'',"desktop-menu --write-out")
-    write_to_file((Var.Program % (SUB_ORDER.sub0, SUB_ORDER.sub1, SUB_ORDER.sub2)).encode(encoding))
+    if not DESKTOP_CODE:
+      print 'No Desktop Code. Please specify a desktop code with --desktop-code';
+      exit
+    else:  
+      DESKTOP = re.sub(r'.*-', '', DESKTOP_CODE)
+      build_menu()
