@@ -8,7 +8,7 @@ function update-menu {
         do
             desktop=$(echo $file|cut -d "." -f1)
             echo "Updating $desktop menu"
-            desktop-menu --write-out-global --no-display --desktop-code $desktop;
+            desktop-menu --write-out-global --desktop-code $desktop;
         done
 } 
 

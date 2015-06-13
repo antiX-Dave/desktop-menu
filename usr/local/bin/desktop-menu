@@ -28,7 +28,7 @@ import xdg.Menu
 import xdg.DesktopEntry
 import xdg.IconTheme
 import xdg.Config
-import gtk
+
 
 version = "1.0"
 
@@ -96,14 +96,20 @@ def find_icon(entry):
   icon = entry.getIcon()
   
   if icon and not no_gtk:
-    icon_theme = gtk.icon_theme_get_default()
-    icon_check = icon_theme.lookup_icon(icon, icon_size, 0)
-    if icon_check:
-      icon_info = icon_theme.lookup_icon(icon, icon_size, 0)
-      icon = icon_info.get_filename()
-      icon = xdg.IconTheme.getIconPath(icon, icon_size) or icon
+    old_stdout = sys.stdout; old_stderr = sys.stderr; sys.stdout = open(os.devnull, 'w'); sys.stderr = open(os.devnull, 'w')
+    import gtk
+    if gtk.icon_theme_get_default():
+      icon_theme = gtk.icon_theme_get_default()
+      icon_check = icon_theme.lookup_icon(icon, icon_size, 0)
+      if icon_check:
+        icon_info = icon_theme.lookup_icon(icon, icon_size, 0)
+        icon = icon_info.get_filename()
+        icon = xdg.IconTheme.getIconPath(icon, icon_size) or icon
+      else:
+        icon = xdg.IconTheme.getIconPath(icon, icon_size) or icon
     else:
       icon = xdg.IconTheme.getIconPath(icon, icon_size) or icon
+    sys.stdout=old_stdout; sys.stderr=old_stderr
       
   if icon and with_theme_paths:
     icon = xdg.IconTheme.getIconPath(icon, icon_size) or icon
@@ -216,7 +222,6 @@ no_gtk = False
 no_icons = False
 icon_size = 32
 DESKTOP_CODE = ""
-no_display = False
 
 exec_clean1_re = re.compile(r'%[a-zA-Z]')
 exec_clean2_re = re.compile(r'%%')
@@ -227,7 +232,7 @@ try: opts, args = getopt.getopt(sys.argv[1:], "",
   ("help", "version", "locale=",
    "root-folder=", "terminal=", "default-folder-icon=", 
    "default-entry-icon=", "menu-programs", "theme=", "with-theme-paths",
-   "icon-size=", "write-out", "write-out-global", "write-out-file=", "desktop-code=", "no-gtk","no-icons", "no-display","menu-file="))
+   "icon-size=", "write-out", "write-out-global", "write-out-file=", "desktop-code=", "no-gtk","no-icons", "menu-file="))
 except getopt.GetoptError: print_usage()
 
 locale.setlocale(locale.LC_ALL, "")
@@ -251,20 +256,16 @@ for o, v in opts:
   elif o == "--icon-size": icon_size = int(v)
   elif o == "--theme" : xdg.Config.setIconTheme(v)
   elif o == "--desktop-code" : DESKTOP_CODE = v
-  elif o == "--no-display" : no_display = True;
   elif o in ("-h", "-?", "--help"): print_usage(0)
   elif o in ("-v", "--version"): print_version()
 
 
 if write_out_global:
     USER_HOME="/usr/share/desktop-menu/"
-
-if no_display:
-    if not DESKTOP_CODE:
-        print "--no-display requires a desktop code: please specify desktop code with --desktop-code"
-        exit
 else:
     USER_HOME = os.environ['HOME']
+
+if 'DISPLAY' in os.environ:
     DISPLAY = os.environ['DISPLAY']
     DISPLAY = re.sub(r':', '', DISPLAY)
     DISPLAY_SPLIT = DISPLAY.split('.')
@@ -274,23 +275,28 @@ else:
             DESKTOP_CODE = f.readline()
             DESKTOP_CODE = re.sub(r'\n', '', DESKTOP_CODE)
             
-if not DESKTOP_CODE:
-  print 'No Desktop Code';
+if not DESKTOP_CODE and not DISPLAY:
+  print 'No Desktop Code and no DISPLAY. Please specify a desktop code with --desktop-code';
   exit
 else:  
   DESKTOP = re.sub(r'.*-', '', DESKTOP_CODE)
   Var().read()
   if write_out_file:
       Var.App_File = write_out_file
+      
   open((USER_HOME+"/"+Var.Conf_Dir+"/"+Var.App_File), 'w').close()  
 
   encoding = locale.getlocale()[1] or 'UTF-8'
   menu = xdg.Menu.parse(menu_file)
   if root_folder: menu = menu.getMenu(root_folder)
   
-  write_to_file(Var.File_Start)
+  if write_out:
+    write_to_file(Var.File_Start)
+  
   process_menu(menu)
-  write_to_file(Var.File_End)
+  
+  if write_out:
+    write_to_file(Var.File_End)
   
   if not (os.path.getsize((USER_HOME+"/"+Var.Conf_Dir+"/"+Var.App_File)) > 50):
     SUB_ORDER('prog',"Retry",'',"desktop-menu --write-out")
